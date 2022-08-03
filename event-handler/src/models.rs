@@ -95,11 +95,11 @@ pub fn to_option_string(s: &str) -> Option<String> {
 }
 
 pub trait ToUserRecord {
-    fn to_user_record(&self) -> UserRecord;
+    fn to_user_record(&self) -> Option<UserRecord>;
 }
 
 impl ToUserRecord for GetItemOutput {
-    fn to_user_record(&self) -> UserRecord {
+    fn to_user_record(&self) -> Option<UserRecord> {
         fn get_string_attribute(
             map: &HashMap<String, AttributeValue, RandomState>,
             key: &str,
@@ -112,7 +112,11 @@ impl ToUserRecord for GetItemOutput {
                 .to_owned()
         }
 
-        let item = self.item().unwrap().to_owned();
+        let item = match self.item() {
+            None => return None,
+            Some(item) => item.to_owned(),
+        };
+
         let user_id = get_string_attribute(&item, "user_id");
 
         let services = item
@@ -141,19 +145,27 @@ impl ToUserRecord for GetItemOutput {
             .map(|s| unwrap_service_attribute(s))
             .collect::<Vec<_>>();
 
-        UserRecord { user_id, services }
+        Some(UserRecord { user_id, services })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use aws_sdk_dynamodb::output::GetItemOutput;
+
     use crate::models::{ToUserRecord, UserRecord};
     use crate::tests::helpers;
 
     #[test]
-    fn test_query_to_user_record() {
+    fn test_to_user_record_decodes_get_item() {
         let item = helpers::build_find_user_output();
         let expected_user_record = UserRecord::default();
-        assert_eq!(item.to_user_record(), expected_user_record);
+        assert_eq!(item.to_user_record().unwrap(), expected_user_record);
+    }
+
+    #[test]
+    fn test_to_user_record_handles_no_item() {
+        let item = GetItemOutput::builder().build();
+        assert!(item.to_user_record().is_none());
     }
 }

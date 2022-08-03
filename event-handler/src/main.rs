@@ -14,7 +14,7 @@ use models::{to_option_string, EventBody, ServiceRecord, ToUserRecord, UserRecor
 async fn get_user_record(
     user_id: &String,
     client: aws_sdk_dynamodb::Client,
-) -> Result<UserRecord, Error> {
+) -> Result<Option<UserRecord>, Error> {
     let req = client
         .get_item()
         .set_table_name(to_option_string("user_services"))
@@ -55,7 +55,10 @@ async fn process_message(event: SqsMessage) -> Result<String, Error> {
     let shared_config = aws_config::load_from_env().await;
     let client = aws_sdk_dynamodb::Client::new(&shared_config);
 
-    let record = get_user_record(&body.user_id, client).await.unwrap();
+    let record = match get_user_record(&body.user_id, client).await.unwrap() {
+        Some(record) => record,
+        None => UserRecord::new(&body.user_id, vec![]),
+    };
     let updated_record = update_record(record, &body).unwrap();
     write_user_record(updated_record).unwrap();
     Ok(body.user_id)
