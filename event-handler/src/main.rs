@@ -4,7 +4,7 @@ use aws_sdk_dynamodb::model::AttributeValue::S;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
 mod models;
-use models::{to_option_string, EventBody, ToUserRecord, UserRecord};
+use models::{to_option_string, EventBody, ServiceRecord, ToUserRecord, UserRecord};
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
@@ -29,7 +29,19 @@ fn write_user_record(record: UserRecord) -> Result<(), Error> {
 }
 
 fn update_record(record: UserRecord, body: &EventBody) -> Result<UserRecord, Error> {
-    todo!()
+    let service = ServiceRecord {
+        service_id: body.service_id.to_owned(),
+        service_name: body.service_name.to_owned(),
+        last_accessed: body.timestamp.to_owned(),
+    };
+    let mut services = record.services;
+    services.retain(|s| s.service_id != service.service_id);
+    services.push(service);
+
+    Ok(UserRecord {
+        user_id: record.user_id,
+        services,
+    })
 }
 
 async fn process_message(event: SqsMessage) -> Result<String, Error> {
@@ -96,5 +108,40 @@ mod tests {
         let response = process_message(message).await.unwrap();
 
         assert_eq!(response, "user_id".to_string());
+    }
+
+    #[test]
+    fn test_update_record_adds_new_service() {
+        let record = UserRecord::new(
+            "user_id",
+            vec![ServiceRecord::new(
+                "service_id",
+                "service_name",
+                "last_accessed",
+            )],
+        );
+
+        let body = EventBody::new("user_id", "other_service_name", "other_service_id", "12345");
+        let expected = update_record(record, &body).unwrap();
+
+        assert_eq!(expected.services.len(), 2);
+    }
+
+    #[test]
+    fn test_update_record_updates_timestamp() {
+        let record = UserRecord::new(
+            "user_id",
+            vec![ServiceRecord::new(
+                "service_id",
+                "service_name",
+                "last_accessed",
+            )],
+        );
+
+        let body = EventBody::new("user_id", "service_name", "service_id", "12345");
+        let expected = update_record(record, &body).unwrap();
+
+        assert_eq!(expected.services.len(), 1);
+        assert_eq!(expected.services[0].last_accessed, "12345".to_string());
     }
 }
