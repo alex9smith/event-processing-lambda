@@ -11,9 +11,10 @@ use models::{to_option_string, EventBody, ServiceRecord, ToUserRecord, UserRecor
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/lambda-runtime/examples
 /// - https://github.com/aws-samples/serverless-rust-demo/
 
-async fn get_user_record(user_id: &String) -> Result<UserRecord, Error> {
-    let shared_config = aws_config::load_from_env().await;
-    let client = aws_sdk_dynamodb::Client::new(&shared_config);
+async fn get_user_record(
+    user_id: &String,
+    client: aws_sdk_dynamodb::Client,
+) -> Result<UserRecord, Error> {
     let req = client
         .get_item()
         .set_table_name(to_option_string("user_services"))
@@ -51,7 +52,10 @@ async fn process_message(event: SqsMessage) -> Result<String, Error> {
         serde_json::from_str(body.as_str())?
     };
 
-    let record = get_user_record(&body.user_id).await.unwrap();
+    let shared_config = aws_config::load_from_env().await;
+    let client = aws_sdk_dynamodb::Client::new(&shared_config);
+
+    let record = get_user_record(&body.user_id, client).await.unwrap();
     let updated_record = update_record(record, &body).unwrap();
     write_user_record(updated_record).unwrap();
     Ok(body.user_id)
