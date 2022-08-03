@@ -1,3 +1,7 @@
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+
+use aws_sdk_dynamodb::model::AttributeValue;
 use aws_sdk_dynamodb::{self, output::GetItemOutput};
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +95,48 @@ pub trait ToUserRecord {
 
 impl ToUserRecord for GetItemOutput {
     fn to_user_record(&self) -> UserRecord {
-        todo!()
+        fn get_string_attribute(
+            map: &HashMap<String, AttributeValue, RandomState>,
+            key: &str,
+        ) -> String {
+            map.get(&key.to_string())
+                .unwrap()
+                .to_owned()
+                .as_s()
+                .unwrap()
+                .to_owned()
+        }
+
+        let item = self.item().unwrap().to_owned();
+        let user_id = get_string_attribute(&item, "user_id");
+
+        let services = item
+            .get(&"services".to_string())
+            .unwrap()
+            .to_owned()
+            .as_l()
+            .unwrap()
+            .to_owned();
+
+        fn unwrap_service_attribute(attribute: &AttributeValue) -> ServiceRecord {
+            let service = attribute.as_m().unwrap().to_owned();
+            let service_id = get_string_attribute(&service, "service_id");
+            let service_name = get_string_attribute(&service, "service_name");
+            let last_accessed = get_string_attribute(&service, "last_accessed");
+
+            ServiceRecord {
+                service_id,
+                service_name,
+                last_accessed,
+            }
+        }
+
+        let services = services
+            .iter()
+            .map(|s| unwrap_service_attribute(s))
+            .collect::<Vec<_>>();
+
+        UserRecord { user_id, services }
     }
 }
 
@@ -102,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_query_to_user_record() {
-        let item = helpers::build_get_item_output();
+        let item = helpers::build_find_user_output();
         let expected_user_record = UserRecord::default();
         assert_eq!(item.to_user_record(), expected_user_record);
     }
