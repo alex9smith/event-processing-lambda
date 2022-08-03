@@ -80,7 +80,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_message_returns_user_id() {
-        let body = EventBody::new("user_id", "service_id", "1659082455");
+        let body = EventBody::new("user_id", "service_name", "service_id", "1659082455");
 
         let message = build_sqs_message(
             "message_id",

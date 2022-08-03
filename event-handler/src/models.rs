@@ -9,15 +9,17 @@ use serde::{Deserialize, Serialize};
 pub struct EventBody {
     pub user_id: String,
     pub service_id: String,
+    pub service_name: String,
     pub timestamp: String,
 }
 
 #[allow(dead_code)]
 impl EventBody {
-    pub fn new(user_id: &str, service_id: &str, timestamp: &str) -> EventBody {
+    pub fn new(user_id: &str, service_name: &str, service_id: &str, timestamp: &str) -> EventBody {
         EventBody {
             user_id: user_id.to_string(),
             service_id: service_id.to_string(),
+            service_name: service_name.to_string(),
             timestamp: timestamp.to_string(),
         }
     }
