@@ -1,22 +1,22 @@
-use crate::models::ToUserRecord;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use aws_sdk_dynamodb;
 use aws_sdk_dynamodb::model::AttributeValue::S;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-mod models;
 
+mod models;
+use models::{to_option_string, EventBody, ToUserRecord, UserRecord};
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/lambda-runtime/examples
 /// - https://github.com/aws-samples/serverless-rust-demo/
 
-async fn get_user_record(user_id: &String) -> Result<models::UserRecord, Error> {
+async fn get_user_record(user_id: &String) -> Result<UserRecord, Error> {
     let shared_config = aws_config::load_from_env().await;
     let client = aws_sdk_dynamodb::Client::new(&shared_config);
     let req = client
         .get_item()
-        .set_table_name(models::to_option_string("user_services"))
+        .set_table_name(to_option_string("user_services"))
         .key("user_id", S(user_id.to_string()));
     let res = req.send().await?;
     let res = res.to_user_record();
@@ -24,20 +24,17 @@ async fn get_user_record(user_id: &String) -> Result<models::UserRecord, Error> 
     Ok(res)
 }
 
-fn write_user_record(record: models::UserRecord) -> Result<(), Error> {
+fn write_user_record(record: UserRecord) -> Result<(), Error> {
     todo!()
 }
 
-fn update_record(
-    record: models::UserRecord,
-    body: &models::EventBody,
-) -> Result<models::UserRecord, Error> {
+fn update_record(record: UserRecord, body: &EventBody) -> Result<UserRecord, Error> {
     todo!()
 }
 
 async fn process_message(event: SqsMessage) -> Result<String, Error> {
     // deserialise message body
-    let body: models::EventBody = {
+    let body: EventBody = {
         let body = event.body.as_ref().unwrap();
         serde_json::from_str(body.as_str())?
     };
@@ -79,12 +76,13 @@ mod tests {
 
     use super::*;
     pub mod helpers;
+    use helpers::build_sqs_message;
 
     #[tokio::test]
     async fn test_process_message_returns_user_id() {
-        let body = models::EventBody::new("user_id", "service_id", "1659082455");
+        let body = EventBody::new("user_id", "service_id", "1659082455");
 
-        let message = helpers::build_sqs_message(
+        let message = build_sqs_message(
             "message_id",
             "receipt_handle",
             body,

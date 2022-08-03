@@ -12,6 +12,7 @@ pub struct EventBody {
     pub timestamp: String,
 }
 
+#[allow(dead_code)]
 impl EventBody {
     pub fn new(user_id: &str, service_id: &str, timestamp: &str) -> EventBody {
         EventBody {
@@ -28,6 +29,7 @@ pub struct UserRecord {
     pub services: Vec<ServiceRecord>,
 }
 
+#[allow(dead_code)]
 impl UserRecord {
     pub fn new(user_id: &str, services: Vec<ServiceRecord>) -> UserRecord {
         UserRecord {
@@ -65,6 +67,7 @@ pub struct ServiceRecord {
     pub last_accessed: String,
 }
 
+#[allow(dead_code)]
 impl ServiceRecord {
     pub fn new(service_id: &str, service_name: &str, last_accessed: &str) -> ServiceRecord {
         ServiceRecord {
