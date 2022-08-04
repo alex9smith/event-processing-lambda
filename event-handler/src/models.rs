@@ -1,9 +1,8 @@
-use std::collections::hash_map::RandomState;
-use std::collections::HashMap;
-
 use aws_sdk_dynamodb::model::AttributeValue;
 use aws_sdk_dynamodb::{self, output::GetItemOutput};
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize)]
 pub struct EventBody {
@@ -62,6 +61,22 @@ impl PartialEq for UserRecord {
     }
 }
 
+pub trait ToAttributeValue {
+    fn to_attribute_value(&self) -> AttributeValue;
+}
+
+impl ToAttributeValue for UserRecord {
+    fn to_attribute_value(&self) -> AttributeValue {
+        let services: Vec<AttributeValue> = self
+            .services
+            .iter()
+            .map(|s| s.to_attribute_value())
+            .collect();
+
+        AttributeValue::L(services)
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub struct ServiceRecord {
     pub service_id: String,
@@ -90,6 +105,26 @@ impl Default for ServiceRecord {
     }
 }
 
+impl ToAttributeValue for ServiceRecord {
+    fn to_attribute_value(&self) -> AttributeValue {
+        AttributeValue::M(HashMap::from([
+            (
+                "service_id".to_string(),
+                AttributeValue::S(self.service_id.to_owned()),
+            ),
+            (
+                "service_name".to_string(),
+                AttributeValue::S(self.service_name.to_owned()),
+            ),
+            (
+                "last_accessed".to_string(),
+                AttributeValue::S(self.last_accessed.to_owned()),
+            ),
+        ]))
+    }
+}
+
+#[allow(dead_code)]
 pub fn to_option_string(s: &str) -> Option<String> {
     Some(s.to_string())
 }
@@ -156,6 +191,8 @@ mod tests {
     use crate::models::{ToUserRecord, UserRecord};
     use crate::tests::helpers;
 
+    use super::*;
+
     #[test]
     fn test_to_user_record_decodes_get_item() {
         let item = helpers::build_find_user_output();
@@ -167,5 +204,46 @@ mod tests {
     fn test_to_user_record_handles_no_item() {
         let item = GetItemOutput::builder().build();
         assert!(item.to_user_record().is_none());
+    }
+
+    #[test]
+    fn test_service_record_to_attribute_value() {
+        let service_record = ServiceRecord::default();
+        let expected = AttributeValue::M(HashMap::from([
+            (
+                "service_id".to_string(),
+                AttributeValue::S("service_id".to_string()),
+            ),
+            (
+                "service_name".to_string(),
+                AttributeValue::S("service_name".to_string()),
+            ),
+            (
+                "last_accessed".to_string(),
+                AttributeValue::S("last_accessed".to_string()),
+            ),
+        ]));
+        assert!(service_record.to_attribute_value() == expected);
+    }
+
+    #[test]
+    fn test_user_record_to_attribute_valuet() {
+        let user_record = UserRecord::default();
+        let expected = AttributeValue::L(vec![AttributeValue::M(HashMap::from([
+            (
+                "service_id".to_string(),
+                AttributeValue::S("service_id".to_string()),
+            ),
+            (
+                "service_name".to_string(),
+                AttributeValue::S("service_name".to_string()),
+            ),
+            (
+                "last_accessed".to_string(),
+                AttributeValue::S("last_accessed".to_string()),
+            ),
+        ]))]);
+
+        assert!(user_record.to_attribute_value() == expected);
     }
 }
