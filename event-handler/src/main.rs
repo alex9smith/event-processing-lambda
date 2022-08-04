@@ -4,7 +4,7 @@ use aws_sdk_dynamodb::model::AttributeValue::S;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
 mod models;
-use models::{to_option_string, EventBody, ServiceRecord, ToUserRecord, UserRecord};
+use models::{EventBody, ServiceRecord, ToAttributeValue, ToUserRecord, UserRecord};
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
@@ -13,11 +13,11 @@ use models::{to_option_string, EventBody, ServiceRecord, ToUserRecord, UserRecor
 
 async fn get_user_record(
     user_id: &String,
-    client: aws_sdk_dynamodb::Client,
+    client: &aws_sdk_dynamodb::Client,
 ) -> Result<Option<UserRecord>, Error> {
     let req = client
         .get_item()
-        .set_table_name(to_option_string("user_services"))
+        .table_name("user_services")
         .key("user_id", S(user_id.to_string()));
     let res = req.send().await?;
     let res = res.to_user_record();
@@ -25,8 +25,16 @@ async fn get_user_record(
     Ok(res)
 }
 
-fn write_user_record(record: UserRecord) -> Result<(), Error> {
-    todo!()
+async fn write_user_record(
+    record: UserRecord,
+    client: &aws_sdk_dynamodb::Client,
+) -> Result<(), Error> {
+    let req = client
+        .put_item()
+        .table_name("user_services")
+        .item(record.user_id.to_owned(), record.to_attribute_value());
+    req.send().await?;
+    Ok(())
 }
 
 fn update_record(record: UserRecord, body: &EventBody) -> Result<UserRecord, Error> {
@@ -55,12 +63,12 @@ async fn process_message(event: SqsMessage) -> Result<String, Error> {
     let shared_config = aws_config::load_from_env().await;
     let client = aws_sdk_dynamodb::Client::new(&shared_config);
 
-    let record = match get_user_record(&body.user_id, client).await.unwrap() {
+    let record = match get_user_record(&body.user_id, &client).await.unwrap() {
         Some(record) => record,
         None => UserRecord::new(&body.user_id, vec![]),
     };
     let updated_record = update_record(record, &body).unwrap();
-    write_user_record(updated_record).unwrap();
+    write_user_record(updated_record, &client).await.unwrap();
     Ok(body.user_id)
 }
 
