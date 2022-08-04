@@ -53,7 +53,7 @@ fn update_record(record: UserRecord, body: &EventBody) -> Result<UserRecord, Err
     })
 }
 
-async fn process_message(event: SqsMessage) -> Result<String, Error> {
+async fn process_message(event: SqsMessage) -> Result<(), Error> {
     // deserialise message body
     let body: EventBody = {
         let body = event.body.as_ref().unwrap();
@@ -69,7 +69,7 @@ async fn process_message(event: SqsMessage) -> Result<String, Error> {
     };
     let updated_record = update_record(record, &body).unwrap();
     write_user_record(updated_record, &client).await.unwrap();
-    Ok(body.user_id)
+    Ok(())
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
@@ -103,27 +103,6 @@ mod tests {
 
     use super::*;
     pub mod helpers;
-    use helpers::build_sqs_message;
-
-    #[tokio::test]
-    async fn test_process_message_returns_user_id() {
-        let body = EventBody::new("user_id", "service_name", "service_id", "1659082455");
-
-        let message = build_sqs_message(
-            "message_id",
-            "receipt_handle",
-            body,
-            "md5_of_body",
-            "md5_of_message_attributes",
-            "event_source_arn",
-            "aws:sqs",
-            "eu-west-2",
-        );
-
-        let response = process_message(message).await.unwrap();
-
-        assert_eq!(response, "user_id".to_string());
-    }
 
     #[test]
     fn test_update_record_adds_new_service() {

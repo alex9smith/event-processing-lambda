@@ -124,11 +124,6 @@ impl ToAttributeValue for ServiceRecord {
     }
 }
 
-#[allow(dead_code)]
-pub fn to_option_string(s: &str) -> Option<String> {
-    Some(s.to_string())
-}
-
 pub trait ToUserRecord {
     fn to_user_record(&self) -> Option<UserRecord>;
 }
