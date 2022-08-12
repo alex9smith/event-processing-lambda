@@ -49,6 +49,14 @@ This stored data structure means we have a slower transformation and load step, 
 ./scripts/deploy.sh
 ```
 
+4. Put a sample event on the SQS queue by running
+
+```bash
+./scripts/write_sample_event_to_queue.sh
+```
+
+5. Look at the SQS, Lambda and DynamoDB monitoring in AWS to see the event travel through the system
+
 ## TODO
 
 - Query Lambda
