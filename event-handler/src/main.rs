@@ -32,7 +32,8 @@ async fn write_user_record(
     let req = client
         .put_item()
         .table_name("user_services")
-        .item(record.user_id.to_owned(), record.to_attribute_value());
+        .item("user_id", S(record.user_id.to_owned()))
+        .item("services", record.to_attribute_value());
     req.send().await?;
     Ok(())
 }

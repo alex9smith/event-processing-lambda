@@ -21,20 +21,19 @@ Transformed by the event handler Lambda and stored in DynamoDB as:
 
 ```json
 {
-  "user_id": {
-    [
-      {
-        "service_id": "abcdef",
-        "service_name": "A service name",
-        "last_accessed": "2022-08-04T08:50:39Z"
-      },
-      {
-        "service_id": "ghijkl",
-        "service_name": "Another service name",
-        "last_accessed": "2022-07-03T10:23:45Z"
-      },
-    ]
-  }
+  "user_id": "123456789",
+  "services": [
+    {
+      "service_id": "abcdef",
+      "service_name": "A service name",
+      "last_accessed": "2022-08-04T08:50:39Z"
+    },
+    {
+      "service_id": "ghijkl",
+      "service_name": "Another service name",
+      "last_accessed": "2022-07-03T10:23:45Z"
+    }
+  ]
 }
 ```
 
