@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  DataStoreTableName:
+    Type: String
+    Default: user_services
+
+Resources:
+  EventHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Architectures: ["arm64"]
+      Handler: bootstrap
+      Runtime: provided.al2
+      Timeout: 5
+      CodeUri: ../event-handler/target/lambda/event-handler/
+      Role: !GetAtt EventHandlerRole.Arn
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt Queue.Arn
+            BatchSize: 1
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DataStoreTableName
+    DependsOn:
+      - EventHandlerPolicy
+
+  Queue:
+    Type: AWS::SQS::Queue
+
+  DataStore:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      TableName: !Ref DataStoreTableName
+      KeySchema: 
+        - AttributeName: user_id
+          KeyType: HASH
+
+  EventHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+  EventHandlerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles:
+        - !Ref EventHandlerRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sqs:ReceiveMessage
+          - sqs:DeleteMessage
+          - sqs:GetQueueAttributes
+          Resource: !GetAtt Queue.Arn
+
+        - Effect: Allow
+          Action:
+          - dynamodb:*
+          Resource: !GetAtt DataStore.Arn
+
+        - Effect: Allow
+          Action:
+          - logs:PutLogEvents
+          - logs:CreateLogStream
+          - logs:CreateLogGroup
+          Resource: "*"
+
+Outputs:
+  EventHandlerFunction:
+    Value: !Ref EventHandlerFunction
+
+  QueueUrl:
+    Value: !Ref Queue

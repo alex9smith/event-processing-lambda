@@ -39,6 +39,16 @@ Transformed by the event handler Lambda and stored in DynamoDB as:
 
 This stored data structure means we have a slower transformation and load step, but a fast query by `user_id` which is what we need for this use case as the query will be blocking a user-facing HTTP response.
 
+## Running the demo
+
+1. Make sure you have the AWS CLI installed and configured with credentials
+2. Install the [AWS SAM CLI](https://aws.amazon.com/serverless/sam/)
+3. From the root of the project run the deploy script
+
+```bash
+./scripts/deploy.sh
+```
+
 ## TODO
 
 - Query Lambda
