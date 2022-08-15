@@ -1,0 +1,25 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+name: Test
+
+jobs:
+  best:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Test common
+        run: cd common && cargo test && cd ..
+      - name: Test query
+        run: cd query && cargo test && cd ..
+      - name: Test event handler
+        run: cd event-handler && cargo test && cd ..
