@@ -63,4 +63,3 @@ This stored data structure means we have a slower transformation and load step, 
 - Cloudformation & scripts to deploy
 - Scripts to add events to the SQS queue & run a query
 - Improve error handling and logging
-- CI
