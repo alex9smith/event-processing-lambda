@@ -69,6 +69,14 @@ This stored data structure means we have a slower transformation and load step, 
 aws cloudformation delete-stack --stack-name event-processing-demo
 ```
 
-## TODO
+## Deploying to production
 
-- Improve error handling and logging
+This system is for demonstration purposes only and isn't ready to be deployed to a production environment.
+This is a non-exhaustive, non-ordered list of what would need to happen before that:
+
+- Add authentication to API Gateway
+- Set up route mapping in API Gateway, rather than forwarding all requests to the query Lambda
+- Add error handling and recovery to both Lambdas
+- Add a dead-letter queue to store events that couldn't be parsed by the event handler
+- Add alerting for the Lambdas, API Gateway and dead-letter queue
+- Set retention periods and better names for Cloudwatch logs
