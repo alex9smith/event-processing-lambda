@@ -2,6 +2,7 @@ use aws_sdk_dynamodb::{self, model::AttributeValue};
 use common::{ServiceRecord, UserRecord};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 use std::collections::HashMap;
+use std::env;
 
 fn get_value(map: &HashMap<String, AttributeValue>, key: &str) -> String {
     map.get(key)
@@ -34,7 +35,7 @@ async fn get_user_services(user_id: String) -> Result<UserRecord, Error> {
 
     let req = client
         .query()
-        .table_name("user_services")
+        .table_name(env::var("TABLE_NAME").expect("Missing TABLE_NAME environment variable"))
         .expression_attribute_values(":user_id", AttributeValue::S(user_id.to_owned()))
         .key_condition_expression("user_id = :user_id");
 
