@@ -2,6 +2,7 @@ use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use aws_sdk_dynamodb;
 use aws_sdk_dynamodb::model::AttributeValue::S;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use std::env;
 
 use common::{EventBody, ServiceRecord, ToAttributeValue, ToUserRecord, UserRecord};
 /// This is the main body for the function.
@@ -13,10 +14,11 @@ use common::{EventBody, ServiceRecord, ToAttributeValue, ToUserRecord, UserRecor
 async fn get_user_record(
     user_id: &String,
     client: &aws_sdk_dynamodb::Client,
+    table_name: &String,
 ) -> Result<Option<UserRecord>, Error> {
     let req = client
         .get_item()
-        .table_name("user_services")
+        .table_name(table_name)
         .key("user_id", S(user_id.to_string()));
     let res = req.send().await?;
     let res = res.to_user_record();
@@ -27,10 +29,11 @@ async fn get_user_record(
 async fn write_user_record(
     record: UserRecord,
     client: &aws_sdk_dynamodb::Client,
+    table_name: &String,
 ) -> Result<(), Error> {
     let req = client
         .put_item()
-        .table_name("user_services")
+        .table_name(table_name)
         .item("user_id", S(record.user_id.to_owned()))
         .item("services", record.to_attribute_value());
     req.send().await?;
@@ -62,13 +65,19 @@ async fn process_message(event: SqsMessage) -> Result<(), Error> {
 
     let shared_config = aws_config::load_from_env().await;
     let client = aws_sdk_dynamodb::Client::new(&shared_config);
+    let table_name = env::var("TABLE_NAME").expect("Missing TABLE_NAME environment variable");
 
-    let record = match get_user_record(&body.user_id, &client).await.unwrap() {
+    let record = match get_user_record(&body.user_id, &client, &table_name)
+        .await
+        .unwrap()
+    {
         Some(record) => record,
         None => UserRecord::new(&body.user_id, vec![]),
     };
     let updated_record = update_record(record, &body).unwrap();
-    write_user_record(updated_record, &client).await.unwrap();
+    write_user_record(updated_record, &client, &table_name)
+        .await
+        .unwrap();
     Ok(())
 }
 
