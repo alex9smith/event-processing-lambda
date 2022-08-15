@@ -1,4 +1,107 @@
+use aws_sdk_dynamodb::{self, model::AttributeValue};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use serde::Serialize;
+use std::collections::HashMap;
+
+// TODO - move these into a shared crate for both lambdas
+trait ToAttributeValue {
+    fn to_attribute_value(&self) -> AttributeValue;
+}
+
+#[derive(PartialEq, Debug, Serialize)]
+
+struct ServiceRecord {
+    pub service_id: String,
+    pub service_name: String,
+    pub last_accessed: String,
+}
+
+impl Default for ServiceRecord {
+    fn default() -> Self {
+        Self {
+            service_id: "service_id".to_string(),
+            service_name: "service_name".to_string(),
+            last_accessed: "last_accessed".to_string(),
+        }
+    }
+}
+
+impl ToAttributeValue for ServiceRecord {
+    fn to_attribute_value(&self) -> AttributeValue {
+        AttributeValue::M(HashMap::from([
+            (
+                "service_id".to_string(),
+                AttributeValue::S(self.service_id.to_owned()),
+            ),
+            (
+                "service_name".to_string(),
+                AttributeValue::S(self.service_name.to_owned()),
+            ),
+            (
+                "last_accessed".to_string(),
+                AttributeValue::S(self.last_accessed.to_owned()),
+            ),
+        ]))
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct UserRecord {
+    user_id: String,
+    services: Vec<ServiceRecord>,
+}
+
+fn get_value(map: &HashMap<String, AttributeValue>, key: &str) -> String {
+    map.get(key)
+        .expect(&format!("Missing {}", key).to_string())
+        .as_s()
+        .expect(&format!("Couldn't parse {}", key).to_string())
+        .to_owned()
+}
+
+fn as_service_record(service: &AttributeValue) -> ServiceRecord {
+    let service = match service.as_m() {
+        Ok(s) => s.to_owned(),
+        Err(_) => panic!("Couldn't parse response from DynamoDB"),
+    };
+
+    let service_id = get_value(&service, "service_id");
+    let service_name = get_value(&service, "service_name");
+    let last_accessed = get_value(&service, "last_accessed");
+
+    ServiceRecord {
+        service_id,
+        service_name,
+        last_accessed,
+    }
+}
+
+async fn get_user_services(user_id: String) -> Result<UserRecord, Error> {
+    let shared_config = aws_config::load_from_env().await;
+    let client = aws_sdk_dynamodb::Client::new(&shared_config);
+
+    let req = client
+        .query()
+        .table_name("user_services")
+        .index_name("user_id")
+        .key_condition_expression("user_id = :user_id")
+        .expression_attribute_values("user_id", AttributeValue::S(user_id.to_owned()));
+
+    let res = req.send().await.expect("Error querying DynamoDB");
+
+    // Querying a primary index, so there will only be one item
+    let item = res.items.unwrap()[0].to_owned();
+    let services: Vec<ServiceRecord> = item
+        .get("services")
+        .unwrap()
+        .as_l()
+        .expect("Couldn't parse response from DynamoDB")
+        .iter()
+        .map(|s| as_service_record(s))
+        .collect();
+
+    Ok(UserRecord { user_id, services })
+}
 
 /// This is the main body for the function.
 /// Write your code inside it.
@@ -7,12 +110,27 @@ use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // Extract some useful information from the request
 
+    let user_id = event
+        .query_string_parameters()
+        .first("user_id")
+        .expect("missing user_id")
+        .to_string()
+        .to_owned();
+
+    let user_services = get_user_services(user_id)
+        .await
+        .expect("could not search for user's services");
+
     // Return something that implements IntoResponse.
     // It will be serialized to the right response event automatically by the runtime
     let resp = Response::builder()
         .status(200)
-        .header("content-type", "text/html")
-        .body("Hello AWS Lambda HTTP request".into())
+        .header("content-type", "application/json")
+        .body(
+            serde_json::to_string(&user_services)
+                .expect("could not serialise response")
+                .into(),
+        )
         .map_err(Box::new)?;
     Ok(resp)
 }
@@ -28,4 +146,18 @@ async fn main() -> Result<(), Error> {
         .init();
 
     run(service_fn(function_handler)).await
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_as_service_record() {
+        let input = ServiceRecord::default().to_attribute_value();
+        let expected = ServiceRecord::default();
+
+        assert_eq!(as_service_record(&input), expected)
+    }
 }
