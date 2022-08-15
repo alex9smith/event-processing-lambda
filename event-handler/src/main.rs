@@ -3,8 +3,7 @@ use aws_sdk_dynamodb;
 use aws_sdk_dynamodb::model::AttributeValue::S;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
-mod models;
-use models::{EventBody, ServiceRecord, ToAttributeValue, ToUserRecord, UserRecord};
+use common::{EventBody, ServiceRecord, ToAttributeValue, ToUserRecord, UserRecord};
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
@@ -103,7 +102,6 @@ async fn main() -> Result<(), Error> {
 mod tests {
 
     use super::*;
-    pub mod helpers;
 
     #[test]
     fn test_update_record_adds_new_service() {

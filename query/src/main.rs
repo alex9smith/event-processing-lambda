@@ -1,55 +1,7 @@
 use aws_sdk_dynamodb::{self, model::AttributeValue};
+use common::{ServiceRecord, UserRecord};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
-use serde::Serialize;
 use std::collections::HashMap;
-
-// TODO - move these into a shared crate for both lambdas
-trait ToAttributeValue {
-    fn to_attribute_value(&self) -> AttributeValue;
-}
-
-#[derive(PartialEq, Debug, Serialize)]
-
-struct ServiceRecord {
-    pub service_id: String,
-    pub service_name: String,
-    pub last_accessed: String,
-}
-
-impl Default for ServiceRecord {
-    fn default() -> Self {
-        Self {
-            service_id: "service_id".to_string(),
-            service_name: "service_name".to_string(),
-            last_accessed: "last_accessed".to_string(),
-        }
-    }
-}
-
-impl ToAttributeValue for ServiceRecord {
-    fn to_attribute_value(&self) -> AttributeValue {
-        AttributeValue::M(HashMap::from([
-            (
-                "service_id".to_string(),
-                AttributeValue::S(self.service_id.to_owned()),
-            ),
-            (
-                "service_name".to_string(),
-                AttributeValue::S(self.service_name.to_owned()),
-            ),
-            (
-                "last_accessed".to_string(),
-                AttributeValue::S(self.last_accessed.to_owned()),
-            ),
-        ]))
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct UserRecord {
-    user_id: String,
-    services: Vec<ServiceRecord>,
-}
 
 fn get_value(map: &HashMap<String, AttributeValue>, key: &str) -> String {
     map.get(key)
@@ -152,6 +104,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
 
     use super::*;
+    use common::ToAttributeValue;
 
     #[test]
     fn test_as_service_record() {
