@@ -63,6 +63,12 @@ This stored data structure means we have a slower transformation and load step, 
 ./scripts/query_api.sh
 ```
 
+7. Remove all resources used in this demo by deleting the Cloudformation stack
+
+```bash
+aws cloudformation delete-stack --stack-name event-processing-demo
+```
+
 ## TODO
 
 - Improve error handling and logging
