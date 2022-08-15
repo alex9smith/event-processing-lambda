@@ -35,7 +35,6 @@ async fn get_user_services(user_id: String) -> Result<UserRecord, Error> {
     let req = client
         .query()
         .table_name("user_services")
-        .index_name("user_id")
         .expression_attribute_values(":user_id", AttributeValue::S(user_id.to_owned()))
         .key_condition_expression("user_id = :user_id");
 
