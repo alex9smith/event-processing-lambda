@@ -57,9 +57,12 @@ This stored data structure means we have a slower transformation and load step, 
 
 5. Look at the SQS, Lambda and DynamoDB monitoring in AWS to see the event travel through the system
 
+6. Run the query script to call the query Lambda via API Gateway
+
+```bash
+./scripts/query_api.sh
+```
+
 ## TODO
 
-- Query Lambda
-- Cloudformation & scripts to deploy
-- Scripts to add events to the SQS queue & run a query
 - Improve error handling and logging
