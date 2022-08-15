@@ -84,9 +84,82 @@ Resources:
           - logs:CreateLogGroup
           Resource: "*"
 
+  QueryLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 128
+      Architectures: ["arm64"]
+      Handler: bootstrap
+      Runtime: provided.al2
+      Timeout: 5
+      CodeUri: ../query/target/lambda/query/
+      Role: !GetAtt QueryRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DataStoreTableName
+    DependsOn:
+      - QueryPolicy
+
+  QueryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+  QueryPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles:
+        - !Ref QueryRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:Query
+          - dynamodb:GetItem
+          Resource: 
+          - !GetAtt DataStore.Arn
+          - !Sub 
+            - '${Arn}/*'
+            - Arn: !GetAtt DataStore.Arn
+            
+
+        - Effect: Allow
+          Action:
+          - logs:PutLogEvents
+          - logs:CreateLogStream
+          - logs:CreateLogGroup
+          Resource: "*"
+  
+  QueryPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt QueryLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: event-demo
+      ProtocolType: HTTP
+      Target: !GetAtt QueryLambda.Arn
+
 Outputs:
   EventHandlerFunction:
     Value: !Ref EventHandlerFunction
 
   QueueUrl:
     Value: !Ref Queue
+
+  ApiEndpoint:
+    Value: !GetAtt ApiGateway.ApiEndpoint

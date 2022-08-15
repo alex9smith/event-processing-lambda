@@ -1,6 +1,6 @@
 #!/bin/bash
 
-queue_url=`aws cloudformation describe-stacks --stack-name event-processing-demo | jq -r '.Stacks[0].Outputs[1].OutputValue'`
+queue_url=`aws cloudformation describe-stacks --stack-name event-processing-demo | jq -r '.Stacks[0].Outputs[2].OutputValue'`
 
 aws sqs send-message --queue-url \
   $queue_url \

@@ -57,9 +57,18 @@ This stored data structure means we have a slower transformation and load step, 
 
 5. Look at the SQS, Lambda and DynamoDB monitoring in AWS to see the event travel through the system
 
+6. Run the query script to call the query Lambda via API Gateway
+
+```bash
+./scripts/query_api.sh
+```
+
+7. Remove all resources used in this demo by deleting the Cloudformation stack
+
+```bash
+aws cloudformation delete-stack --stack-name event-processing-demo
+```
+
 ## TODO
 
-- Query Lambda
-- Cloudformation & scripts to deploy
-- Scripts to add events to the SQS queue & run a query
 - Improve error handling and logging
