@@ -39,6 +39,10 @@ Transformed by the event handler Lambda and stored in DynamoDB as:
 
 This stored data structure means we have a slower transformation and load step, but a fast query by `user_id` which is what we need for this use case as the query will be blocking a user-facing HTTP response.
 
+## Diagram
+
+![System diagram showing how data enters the system on an SQS queue, is modified by the event handler Lambda and stored in DynamoDB](docs/system-diagram.png)
+
 ## Running the demo
 
 1. Make sure you have the AWS CLI installed and configured with credentials
